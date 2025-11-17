@@ -7,7 +7,6 @@ steps:
     args: ["push", "gcr.io/$PROJECT_ID/daily-tech"]
 
   - name: "gcr.io/cloud-builders/gcloud"
-    entrypoint: "gcloud"
     args:
       - "run"
       - "deploy"
