@@ -18,3 +18,4 @@ steps:
       - "--add-cloudsql-instances=$(INSTANCE_CONNECTION_NAME)"
       - "--set-env-vars=DB_USER=$(DB_USER),DB_PASS=$(DB_PASS),DB_NAME=$(DB_NAME),DB_HOST=/cloudsql/$(INSTANCE_CONNECTION_NAME),SMTP_USER=$(SMTP_USER),SMTP_PASSWORD=$(SMTP_PASSWORD)"
 
+YAML
