@@ -1,17 +1,7 @@
-<<<<<<< HEAD
 fastapi
 uvicorn[standard]
 requests
 google-auth
 psycopg2-binary
-pydantic
-=======
-fastapi
-uvicorn[standard]
-requests
-google-auth
-psycopg2-binary
-pydantic
+pydantic[email]
 email-validator
->>>>>>> 39312bdaa5d43ce8be1f6efd01d23b2cf0700a34
-
