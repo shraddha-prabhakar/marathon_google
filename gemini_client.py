@@ -1,37 +1,22 @@
-# gemini_client.py
-import requests
 import google.auth
-import google.auth.transport.requests
+from google.auth.transport.requests import Request
+import requests
+import os
 
-MODEL_NAME = "models/gemini-2.5-flash"
-BASE_URL = "https://generative.googleapis.com/v1beta2"
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+API_KEY = os.getenv("GEMINI_API_KEY")
 
-def get_token():
-    creds, _ = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
-    creds.refresh(google.auth.transport.requests.Request())
-    return creds.token
-
-def generate_daily_digest(system_instruction, user_message):
-    token = get_token()
-    url = f"{BASE_URL}/{MODEL_NAME}:generateText"
+def get_daily_tech_news():
     payload = {
-        "prompt": {
-            "messages": [
-                {"author": "system", "content": [{"type": "text", "text": system_instruction}]},
-                {"author": "user", "content": [{"type": "text", "text": user_message}]}
-            ]
-        }
+        "contents": [{
+            "parts": [{"text": "Give a short 5-line summary of today's top tech news."}]
+        }]
     }
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
+    response = requests.post(f"{API_URL}?key={API_KEY}", json=payload)
 
-    res = requests.post(url, json=payload, headers=headers, timeout=60)
-    res.raise_for_status()
-    data = res.json()
+    if response.status_code != 200:
+        return f"Gemini API failed: {response.text}"
 
-    if "candidates" in data:
-        return data["candidates"][0]["content"]
-    return str(data)
+    result = response.json()
+    return result["candidates"][0]["content"]["parts"][0]["text"]

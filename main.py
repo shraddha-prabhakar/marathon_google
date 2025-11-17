@@ -1,38 +1,71 @@
-# main.py
-from fastapi import FastAPI
-from gemini_client import generate_daily_digest
-from email_sender import send_email
-from db import list_subscribers, add_subscriber
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
+from db import get_db_connection
+from email_sender import send_email
+from gemini_client import get_daily_tech_news
 
 app = FastAPI()
 
-SYSTEM_INSTRUCTION = """
-Write a clean, well-written daily tech update email that feels human, natural, and professional — not like AI.
-No greeting, no sign-off. Headlines + 2 sentence summaries. End with Insight of the Day.
-"""
-
-USER_PROMPT = """
-Tech information includes various topics and trends in AI, software, cybersecurity...
-"""
-
-class SubscribeReq(BaseModel):
+# ---------- MODELS ----------
+class SubscribeRequest(BaseModel):
     email: EmailStr
 
-@app.get("/run-daily")
-def run_daily():
-    subscribers = list_subscribers()
+# ---------- ROOT + HEALTH ----------
+@app.get("/")
+def root():
+    return {"status": "DailyTech API is running 🚀"}
 
-    content = generate_daily_digest(SYSTEM_INSTRUCTION, USER_PROMPT)
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
-    sent = 0
-    for email in subscribers:
-        send_email(email, "Your Daily Tech Update", content)
-        sent += 1
-
-    return {"status": "success", "sent": sent}
-
+# ---------- SUBSCRIBE ----------
 @app.post("/subscribe")
-def subscribe(req: SubscribeReq):
-    add_subscriber(req.email)
-    return {"status": "added", "email": req.email}
+def subscribe(request: SubscribeRequest):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "INSERT INTO subscribers (email) VALUES (%s) ON CONFLICT DO NOTHING",
+            (request.email,)
+        )
+        conn.commit()
+        return {"message": f"Subscribed: {request.email}"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        cursor.close()
+        conn.close()
+
+# ---------- SEND NEWSLETTER ----------
+@app.post("/send-newsletter")
+def send_newsletter():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Fetch all subscribers
+        cursor.execute("SELECT email FROM subscribers")
+        subscribers = [row[0] for row in cursor.fetchall()]
+
+        if not subscribers:
+            return {"message": "No subscribers yet!"}
+
+        # Get AI generated news
+        news_content = get_daily_tech_news()
+
+        # Send emails
+        for email in subscribers:
+            send_email(email, "Your Daily Tech Update", news_content)
+
+        return {"message": f"Newsletter sent to {len(subscribers)} subscribers"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        cursor.close()
+        conn.close()
