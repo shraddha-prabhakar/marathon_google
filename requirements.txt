@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+requests
+google-auth
+psycopg2-binary
+pydantic
