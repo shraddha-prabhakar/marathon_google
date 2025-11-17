@@ -4,3 +4,5 @@ requests
 google-auth
 psycopg2-binary
 pydantic
+email-validator
+
