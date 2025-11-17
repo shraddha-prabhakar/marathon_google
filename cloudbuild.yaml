@@ -6,13 +6,14 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["push", "gcr.io/$PROJECT_ID/daily-tech"]
 
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "gcloud"
     args:
-      - "gcloud"
       - "run"
       - "deploy"
       - "daily-tech"
       - "--image=gcr.io/$PROJECT_ID/daily-tech"
       - "--region=us-central1"
       - "--allow-unauthenticated"
+      - "--platform=managed"
 YAML
