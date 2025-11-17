@@ -1,71 +1,48 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, EmailStr
+from fastapi import FastAPI
+import requests
 from db import get_db_connection
 from email_sender import send_email
-from gemini_client import get_daily_tech_news
+from gemini_client import get_summary
 
 app = FastAPI()
 
-# ---------- MODELS ----------
-class SubscribeRequest(BaseModel):
-    email: EmailStr
-
-# ---------- ROOT + HEALTH ----------
-@app.get("/")
-def root():
-    return {"status": "DailyTech API is running 🚀"}
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-# ---------- SUBSCRIBE ----------
 @app.post("/subscribe")
-def subscribe(request: SubscribeRequest):
+def subscribe_user(email: str):
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cur = conn.cursor()
 
     try:
-        cursor.execute(
-            "INSERT INTO subscribers (email) VALUES (%s) ON CONFLICT DO NOTHING",
-            (request.email,)
-        )
+        cur.execute("INSERT INTO subscribers (email) VALUES (%s)", (email,))
         conn.commit()
-        return {"message": f"Subscribed: {request.email}"}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+        return {"message": "Subscribed successfully"}
+    except:
+        return {"message": "Email already subscribed"}
     finally:
-        cursor.close()
+        cur.close()
         conn.close()
 
-# ---------- SEND NEWSLETTER ----------
-@app.post("/send-newsletter")
-def send_newsletter():
+
+@app.post("/send")
+def send_daily_news():
+    # 1. Fetch latest tech news
+    url = "https://newsapi.org/v2/top-headlines?category=technology&apiKey=YOUR_NEWSAPI_KEY"
+    news = requests.get(url).json()
+
+    articles = [a["title"] for a in news.get("articles", [])[:5]]
+    combined = "\n".join(articles)
+
+    # 2. Summarize using Gemini
+    summary = get_summary(combined)
+
+    # 3. Get all subscriber emails
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cur = conn.cursor()
+    cur.execute("SELECT email FROM subscribers")
+    subscribers = cur.fetchall()
 
-    try:
-        # Fetch all subscribers
-        cursor.execute("SELECT email FROM subscribers")
-        subscribers = [row[0] for row in cursor.fetchall()]
+    # 4. Send email to all
+    for row in subscribers:
+        email = row[0]
+        send_email(email, "Daily Tech News Summary", summary)
 
-        if not subscribers:
-            return {"message": "No subscribers yet!"}
-
-        # Get AI generated news
-        news_content = get_daily_tech_news()
-
-        # Send emails
-        for email in subscribers:
-            send_email(email, "Your Daily Tech Update", news_content)
-
-        return {"message": f"Newsletter sent to {len(subscribers)} subscribers"}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-    finally:
-        cursor.close()
-        conn.close()
+    return {"message": "Emails sent successfully"}
