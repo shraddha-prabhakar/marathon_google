@@ -1,11 +1,17 @@
-cat > cloudbuild.yaml <<'YAML'
 steps:
+  # Build the Docker image
   - name: "gcr.io/cloud-builders/docker"
-    args: ["build", "-t", "gcr.io/$PROJECT_ID/daily-tech", "."]
+    args: 
+      - "build"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/daily-tech"
+      - "."
 
+  # Push the Docker image
   - name: "gcr.io/cloud-builders/docker"
-    args: ["push", "gcr.io/$PROJECT_ID/daily-tech"]
+    args: 
+      - "push"
+      - "gcr.io/$PROJECT_ID/daily-tech"
 
 images:
-  - gcr.io/$PROJECT_ID/daily-tech
-YAML
+  - "gcr.io/$PROJECT_ID/daily-tech"
